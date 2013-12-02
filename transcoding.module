@@ -1,0 +1,445 @@
+<?php
+/* MP4
+
+$transcoding_preset = new stdClass();
+$transcoding_preset->disabled = FALSE;
+$transcoding_preset->api_version = 1;
+$transcoding_preset->pid = '1';
+$transcoding_preset->name = 'mp4';
+$transcoding_preset->title = 'MP4';
+$transcoding_preset->settings = array(
+  'extension' => 'mp4',
+  'vcodec' => 'libx264',
+  'b' => '1039k',
+  'bt' => '50k',
+  'r' => '',
+  'g' => '',
+  'acodec' => 'libfaac',
+  'ab' => '56k',
+  'ac' => '2',
+  's' => '640x360',
+  'options' => array(
+    '-movflags +faststart' => '-movflags +faststart',
+  ),
+  'encoder_options' => '-vcodec libx264 -b 1039k -bt 50k -acodec libfaac -ab 56k -ac 2 -s 640x360 -movflags +faststart',
+);
+
+
+*/
+
+/**
+ * Implements hook_permission().
+ */
+function transcoding_permission() {
+  return array(
+    'administer transcodings' =>  array(
+      'title' => t('Adminster transcodings'),
+      'description' => t('Schedule jobs, manage transcoding queue and presets.'),
+    ),
+    'administer transcoding queue' => array(
+      'title' => t('Administer transcoding queue'),
+      'description' => t('Redo or delete transcoding items from the queue.'),
+    ),
+  );
+}
+
+
+/**
+ * Implements hook_menu().
+ */
+function transcoding_menu() {
+  $items['codem/thumb/%node/%'] = array(
+    'title' => 'ffmpeg thumb generator',
+    'page callback' => 'codem_thumb_generator',
+    'page arguments' => array(2, 3),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'file' => 'transcoding.thumb.inc',
+  );
+  $items['admin/content/transcoding'] = array(
+    'title' => 'Transcoding',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('transcoding_overview_page'),
+    'access arguments' => array('administer transcodings'),
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
+    'file' => 'transcoding.admin.inc',
+  );
+  $items['admin/content/transcoding/list'] = array(
+    'access arguments' => array('administer transcodings'),
+    'title' => 'Overview',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['transcoding/notification'] = array(
+    'title' => 'Transcoding notification',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'transcoding_notification',
+    'access callback' => TRUE,
+  );
+  $items['node/%node/thumb-select'] = array(
+    'title' => 'Select thumbnail',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('transcode_thumb_select', 1),
+    'access callback' => '_transcode_thumb_select_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'transcoding.thumb.inc',
+  );
+  return $items;
+}
+
+function _transcode_thumb_select_access($node) {
+  //  debug(test);
+  //return user_access('adminster transcodings');
+  //$film_fields = variable_get('codem_video_file_fields', array());
+  $film_fields = array('field_film_file');
+  $instances = field_info_instances('node', $node->type);
+  foreach ($film_fields as $field_name) {
+    if (in_array($field_name, array_keys($instances))) {
+      if (!empty($node->{$field_name}[LANGUAGE_NONE][0]['uri'])) {
+        return user_access('administer transcodings');
+      }
+    }
+  }
+  return FALSE;
+}
+
+function transcoding_cron() {
+  if (transcoding_free_slots() > 0) {
+    $job = db_select('transcoding_queue', 'q')
+      ->fields('q')
+      ->condition('q.status', 'pending')
+      ->condition('q.job_id', '')
+      ->range(0, 1)
+      ->execute()
+      ->fetchAssoc();
+    if (!empty($job)) {
+      watchdog('transcoding', 'Proc: <pre>' . print_r($job, TRUE) . '</pre>');
+      $preset = transcoding_load_preset($job['preset']);
+      watchdog('t', '<pre>' . print_r($preset, TRUE) . '</pre>');
+      $ext = $preset->settings['extension'];
+      $query = json_encode(array(
+        'source_file' => drupal_realpath($job['source_uri']),
+        'destination_file' => $job['destination_file'],
+        'encoder_options' => $preset->settings['encoder_options'],
+        'callback_urls' => array(url('transcoding/notification', array('absolute' => TRUE))),
+      ));
+      watchdog('transcoding', 'Send: <pre>' . print_r($query, TRUE) . '</pre>');
+      $jobs_url = variable_get('transcoding_server', 'http://localhost:8080') . '/jobs';
+      $response = drupal_http_request($jobs_url, array(
+        'method' => 'POST',
+        'data' => $query,
+      ));
+      watchdog('transcoding', 'Result: <pre>' . print_r($response, TRUE) . '</pre>');
+      if ($response->code == 202) {
+        $data = json_decode($response->data);
+        db_update('transcoding_queue')
+          ->fields(array(
+            'job_id' => $data->job_id,
+          ))
+          ->condition('qid', $job['qid'])
+          ->execute();
+      }
+      else {
+        db_update('transcoding_queue')
+          ->fields(array(
+            'status' => $response->code,
+          ))
+          ->condition('qid', $job['qid'])
+          ->execute();
+      }
+    }
+  }
+}
+
+function transcoding_get_status() {
+  $status = FALSE;
+  $response = drupal_http_request(variable_get('transcoding_server',
+    'http://localhost:8080') . '/jobs');
+  if ($response->code == 200) {
+    $status = json_decode($response->data);
+  }
+  /*
+  else {
+    debug($response);
+  }
+  */
+  return $status;
+}
+
+function transcoding_free_slots() {
+  $slots = 0;
+  $response = drupal_http_request(variable_get('transcoding_server',
+    'http://localhost:8080') . '/jobs');
+  if ($response->code == 200) {
+    $data = json_decode($response->data);
+    $slots = $data->free_slots;
+  }
+  else {
+    watchdog('transcoding', 'Failed to contact transcoding server: ' .
+      $response->error);
+  }
+  return $slots;
+}
+
+
+function transcoding_notification() {
+  $putdata = json_decode(file_get_contents("php://input"));
+  watchdog('codem', '<pre>' . print_r($putdata, TRUE) . '</pre>');
+  if ($putdata->status == 'success') {
+    $job = db_select('transcoding_queue', 'q')
+      ->condition('q.job_id', $putdata->id)
+      ->fields('q')
+      ->execute()
+      ->fetchAssoc();
+    watchdog('transcoding', 'Success: <pre>' . print_r($job, TRUE) . '</pre>');
+    // $file = file_save_upload($job['destination_file']);
+
+    global $user;
+    $file = (object) array(
+      'uid' => $user->uid,
+      'uri' => $job['destination_file'],
+      'filemime' => file_get_mimetype($job['destination_file']),
+      'status' => 1,
+    );
+    $file = file_copy($file, 'public://');
+    watchdog('transcoding', 'created file: <pre>' . print_r($file, TRUE) . '</pre>');
+
+    rules_invoke_event('transcoding_done', unserialize($job['context']), $file);
+    db_update('transcoding_queue')
+      ->fields(array(
+        'status' => 'done',
+      ))
+      ->condition('qid', $job['qid'])
+      ->execute();
+  }
+}
+
+
+
+
+function transcoding_load_all_presets() {
+  ctools_include('export');
+  return ctools_export_crud_load_all('transcoding_preset');
+}
+function transcoding_load_preset($name) {
+  ctools_include('export');
+  return ctools_export_crud_load('transcoding_preset', $name);
+}
+
+
+function transcoding_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'ctools' && $plugin == 'export_ui') {
+    return 'plugins/export_ui';
+  }
+  if ($module == 'transcoding' && $plugin == 'transcoder') {
+    return 'plugins/transcoders';
+  }
+}
+
+function transcoding_ctools_plugin_type() {
+  return array(
+    'transcoder' => array(
+      'use hooks' => FALSE,
+    ),
+  );
+}
+
+function transcoding_get_ffmpeg_text($command) {
+  ob_start();
+  passthru("{$command} 2>&1");
+  $output = ob_get_contents();
+  ob_end_clean();
+  return $output;
+}
+
+function transcoding_get_transcoders() {
+  ctools_include('plugins');
+  return ctools_get_plugins('transcoding', 'transcoder');
+}
+
+function transcoding_get_encoders($codec_type) {
+  $encoders = cache_get('transcoding_available_encoders');
+  if (empty($encoders)) {
+    $text = transcoding_get_ffmpeg_text('ffmpeg -encoders');
+    $matches = array();
+    $pattern = '/([\.VASFXBD]{6})\s(\w+)[\s]+(.+)\n/';
+    preg_match_all($pattern, $text, $matches);
+    $encoders = array();
+    foreach ($matches[1] as $key => $type) {
+      $type_parsed = _transcoding_parse_codec_type($type);
+      $encoders[$type_parsed][$matches[2][$key]] = $matches[3][$key];
+    }
+    cache_set('transcoding_available_encoders', $encoders);
+  }
+  else {
+    $encoders = $encoders->data;
+  }
+  return $encoders[$codec_type];
+}
+function _transcoding_parse_codec_type($type) {
+  $type = substr($type, 0, 1);
+  $types = array('V' => 'video', 'A' => 'audio', 'S' => 'subtitle');
+  return $types[$type];
+}
+
+function transcoding_get_video_encoders() {
+  return transcoding_get_encoders('video');
+}
+
+
+function transcoding_get_audio_encoders() {
+  return transcoding_get_encoders('audio');
+}
+
+function transcoding_theme() {
+  return array(
+    'transcoding_queue_table' => array(
+      'render element' => 'element',
+    ),
+  );
+}
+
+function theme_transcoding_queue_table(&$vars) {
+  $element = $vars['element'];
+  $rows = array();
+  foreach (element_children($element) as $key) {
+    $rows[] = array(
+      'data' => array(
+        array('data' => render($element[$key]['context'])),
+        array('data' => render($element[$key]['source_uri'])),
+        //array('data' => render($element[$key]['destination_file'])),
+        array('data' => render($element[$key]['preset'])),
+        array('data' => render($element[$key]['status'])),
+        array('data' => render($element[$key]['timestamp'])),
+        array('data' => render($element[$key]['operations'])),
+      ),
+    );
+  }
+  $header = array('Context', 'Source', 'Preset', 'Status', 'Submitted', 'Operations');
+  $output = theme('table', array('header' => $header, 'rows' => $rows,
+    'attributes' => array('id' => $element['#id'])));
+  return $output;
+}
+
+
+function transcoding_queue_operation($op, $qid) {
+  $result = FALSE;
+  switch ($op) {
+    case 'delete':
+      $result = db_delete('transcoding_queue')
+        ->condition('qid', $qid)
+        ->execute();
+      break;
+
+    case 'redo':
+      $result = db_update('transcoding_queue')
+        ->condition('qid', $qid)
+        ->fields(array('status' => 'pending',
+          'timestamp' => REQUEST_TIME, 'job_id' => ''))
+        ->execute();
+      break;
+  }
+  return $result;
+}
+
+
+
+
+
+
+
+/**
+ * Utility function that takes a node and a field name where video file is stored
+ * and uses ffmpeg to find the duration of the film in seconds
+ */
+function codem_get_film_length($node, $field_name) {
+  // debug(get_defined_vars(), 'v', TRUE);
+  if (!empty($node->{$field_name}[LANGUAGE_NONE][0]['uri'])) {
+    $file_name = drupal_realpath($node->{$field_name}[LANGUAGE_NONE][0]['uri']);
+  }
+  elseif (!empty($node->{$field_name}[LANGUAGE_NONE][0]['fid'])) {
+    $file = file_load($node->{$field_name}[LANGUAGE_NONE][0]['fid']);
+    $file_name = drupal_realpath($file->uri);
+  }
+  if (!empty($file_name)) {
+    ob_start();
+    passthru("ffmpeg -i \"{$file_name}\" 2>&1");
+    $output = ob_get_contents();
+    ob_end_clean();
+    $matches = array();
+    preg_match('/Duration: (.*?),/', $output, $matches);
+    $duration_array = explode(':', $matches[1]);
+    return $duration_array[0] * 3600 + $duration_array[1] * 60 + $duration_array[2];
+  }
+  return 0;
+}
+
+
+
+
+
+function codem_get_film_thumbnail($node, $field_name, $offset) {
+  $source = new stdClass();
+  $source->uri = codem_thumb_generator($node, $offset, TRUE, 'uri', $field_name);
+  // Check if this image was added to file_managed already
+  $query = db_select('file_managed', 'f');
+  $query->condition('uri', $source->uri);
+  $query->fields('f', array('fid'));
+  $result = $query->execute();
+  if ($file = $result->fetch()) {
+    return $file->fid;
+  }
+  // Otherwise, save it and return
+  $source->filename = drupal_basename($source->uri);
+  $source->filesize = filesize($source->uri);
+  $source->filemime = 'image/jpeg';
+  $source->status = 1;
+  global $user;
+  $source->uid = $user->uid;
+  $file = file_save($source);
+  return $file->fid;
+}
+
+
+
+function codem_thumb_generator($node, $frame, $ret = FALSE, $type = 'path', $film_field = 'field_film_file') {
+  $output = array();
+  $frame = intval($frame) / 100;
+  $file_dir = "public://codec-thumb/{$node->nid}/";
+  $file_uri = "public://codec-thumb/{$node->nid}/{$frame}.jpg";
+  if (file_exists(drupal_realpath($file_uri))) {
+    $output['path'] = file_create_url($file_uri);
+    $output['uri'] = $file_uri;
+  }
+  else {
+    file_prepare_directory($file_dir, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
+    $in_file = $node->{$film_field}[LANGUAGE_NONE][0]['uri'];
+    $in_file = str_replace(array(" ", "'"), array('\ ', "\'"), drupal_realpath($in_file));
+    $ffmpeg = "ffmpeg -ss {$frame} -i {$in_file} -vcodec mjpeg ";
+    $ffmpeg .= "-vframes 1 -an -f rawvideo -s 700x395 -q:v 1 -y /tmp/codec-thumb-{$node->nid}-{$frame}.jpg";
+    $output['ffmpeg'] = $ffmpeg;
+    $output_log = array();
+    $output['result'] = exec($ffmpeg, $output_log);
+    $output['log'] = $output_log;
+    file_unmanaged_copy("/tmp/codec-thumb-{$node->nid}-{$frame}.jpg", $file_uri);
+    $output['uri'] = $file_uri;
+    $output['path'] = file_create_url($file_uri);
+  }
+  if ($ret) {
+    return $output[$type];
+  }
+  print json_encode($output);
+}
+
+
+
+
+
+
+
+
+
+
+
+

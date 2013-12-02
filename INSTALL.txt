@@ -1,0 +1,158 @@
+Installing Transcode
+====================
+
+Here is an outline of the steps required to install and get started using
+Drupal Transcode. I am using Ubuntu 12.04 - some instructions will vary
+depending on your OS.
+
+
+ffmpeg
+------
+
+The guide for installing ffmpeg on Ubuntu 12.04 is here:
+
+    https://ffmpeg.org/trac/ffmpeg/wiki/UbuntuCompilationGuide
+
+
+Node.js
+-------
+
+If you've never built any software from sources before you will need to
+install the build-essential packages. You may already have this...
+
+    sudo apt-get install build-essential
+
+If you need SSL support for node, install the dev libraries...
+
+    sudo apt-get install libssl-dev
+
+Download the latest version of node.js and unpack it...
+
+    wget http://nodejs.org/dist/node-latest.tar.gz
+    tar -xzf node-latest.tar.gz
+    cd node-v0.8.17
+
+Configure node ready for building. If you want SSL support remove the
+'--without-ssl' option...
+
+    ./configure --without-ssl
+
+Then run the build...
+
+    sudo make install
+
+That will take some time. Once it's done you can verify the versions of Node.js
+and NPM (node package manager)...
+
+    node -v
+    npm -v
+
+
+Codem Transcode
+---------------
+
+You should make sure you have the prerequisites installed first. You need ffmeg,
+sqlite3, and node.js (version 0.8.11 or higher).
+
+    sudo npm install codem-transcode -g
+
+To get Codem running as a service, install Forever...
+
+   sudo npm install forever -g
+
+Then create a configuration file for codem transcode. I created this in
+`/etc/codem-transcode/config.json` with the following options:
+
+    {
+      "port": 8080,
+      "access_log": "/var/codem-transcode/codem_access_log",
+      "database": "/var/codem-transcode/jobs.db",
+      "slots": 2,
+      "interface": "127.0.0.1",
+      "encoder": "/usr/local/bin/ffmpeg",
+      "scratch_dir": "/tmp",
+      "use_scratch_dir": true,
+      "ffprobe": null
+    }
+
+Node's json parser is pretty strict, so watch out for syntax in your config file.
+
+Now make sure that the path exists in /var for codem-transcode to save it's DB
+and log files. Then try starting codem transcode with...
+
+    /usr/local/bin/codem-transcode -c /etc/codem-transcode/config.json
+
+If it starts without any errors, move on to setting it up as a service.
+
+
+Forever Codem
+-------------
+
+To run Codem Transcode as a service, setup an init script for it at
+/etc/init.d/codem-transcode with the following content:
+
+    #!/bin/bash
+    ### BEGIN INIT INFO
+    # Provides:          codem-transcode
+    # Required-Start:    $remote_fs $network
+    # Required-Stop:     $remote_fs $network
+    # Default-Start:     2 3 4 5
+    # Default-Stop:      0 1 6
+    # Short-Description: starts codem-transcode
+    # Description:       Starts Codem Transcode Daemon
+    ### END INIT INFO
+
+    FOREVER_BIN=/usr/local/bin/forever
+    CODEM_BIN=/usr/local/bin/codem-transcode
+    CONFIG=/etc/codem-transcode/config.json
+
+    do_start() {
+      $FOREVER_BIN start $CODEM_BIN -c $CONFIG
+    }
+
+    do_stop() {
+      $FOREVER_BIN stop $CODEM_BIN
+    }
+
+    case "$1" in
+      start)
+      echo "Starting Codem Transcode..."
+      $FOREVER_BIN start $CODEM_BIN -c $CONFIG
+      ;;
+      stop)
+      echo "Stopping Codem Transcode..."
+      $FOREVER_BIN stop $CODEM_BIN
+      ;;
+      restart)
+      echo "Restarting Codem Transcode..."
+      $FOREVER_BIN restart $CODEM_BIN
+      ;;
+      *)
+      echo "Usage: /etc/init.d/codem {start|stop|restart}"
+      exit 1
+      ;;
+    esac
+
+    :
+
+Then make it executable...
+
+    sudo chmod +x /etc/init.d/codem-transcode
+
+You can now start, stop, and restart the transcoding service...
+
+   sudo /etc/init.d/codem-transcode start
+
+Done!
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,4 @@
+name = Transcoding FFMPEG
+core = 7.x
+package = Transcoding
+description = FFMPEG transcoding plugin for Drupal Transcoding

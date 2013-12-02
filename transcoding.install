@@ -1,0 +1,112 @@
+<?php
+
+function transcoding_schema() {
+  $schema = array();
+  $schema['transcoding_preset'] = array(
+    'description' => 'Transcoding presets',
+    'fields' => array(
+      'pid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Unique machine-readable name',
+      ),
+      'title' => array(
+        'description' => 'Display name',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'settings' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'serialize' => TRUE,
+        'object default' => array(),
+      ),
+    ),
+    'indexes' => array(
+      'machine_name' => array('name'),
+    ),
+    'primary key' => array('pid'),
+    'export' => array(
+      'identifier' => 'transcoding_preset',
+      'admin_title' => 'title',
+      'bulk export' => TRUE,
+      'primary key' => 'pid',
+      'api' => array(
+        'owner' => 'transcoding',
+        'api' => 'transcoding_presets',
+        'minimum_version' => 1,
+        'current_version' => 1,
+      ),
+    ),
+  );
+  $schema['transcoding_queue'] = array(
+    'description' => 'Transcoding queue',
+    'fields' => array(
+      'qid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'source_uri' => array(
+        'description' => 'The file to use as the source file in transcoding.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'destination_file' => array(
+        'description' => 'The file to use as the source file in transcoding.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'context' => array(
+        'description' => 'The context that triggered the transcoding.',
+        'type' => 'text',
+        'size' => 'big',
+        'serialize' => TRUE,
+        'object default' => array(),
+      ),
+      'preset' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Name of the preset to use in encoding',
+      ),
+      'timestamp' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'job_id' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('qid'),
+  );
+  return $schema;
+}
+
+
+
+
+
+

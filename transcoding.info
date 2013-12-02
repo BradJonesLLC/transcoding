@@ -1,0 +1,6 @@
+name = Transcoding API
+core = 7.x
+package = Transcoding
+description = Main API module for video transcoding
+
+files[] = includes/transcoder.inc
