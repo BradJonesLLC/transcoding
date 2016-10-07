@@ -12,7 +12,7 @@
         }
     ],
     "require": {
-        "drupal/media_entity": "~1.5",
+        "drupal/media_entity": "~1.5"
     }
 }
 
