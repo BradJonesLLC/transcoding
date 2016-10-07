@@ -1,0 +1,18 @@
+{
+    "name": "drupal/transcoding",
+    "description": "Video transcoding API for Drupal.",
+    "type": "drupal-module",
+    "license": "GPL-2.0+",
+    "keywords": ["video"],
+    "minimum-stability": "dev",
+    "authors": [
+        {
+            "name": "Brad Jones",
+            "email": "brad@bradjonesllc.com"
+        }
+    ],
+    "require": {
+        "drupal/media_entity": "~1.5",
+    }
+}
+
