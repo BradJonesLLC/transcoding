@@ -1,0 +1,4 @@
+administer transcoding job entities:
+  title: 'Administer Transcoding jobs'
+  description: 'Allow to access the administration form to configure Transcoding job entities.'
+  restrict access: true

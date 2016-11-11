@@ -4,7 +4,6 @@ namespace Drupal\transcoding\Annotation;
 
 use Drupal\Component\Annotation\Plugin;
 
-
 /**
  * Defines a Transcoder annotation object.
  *

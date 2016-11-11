@@ -1,0 +1,6 @@
+transcoding.transcoding_config_form:
+  title: 'Transcoding'
+  route_name: transcoding.transcoding_config_form
+  description: 'Transcoding module config'
+  parent: system.admin_config_services
+  weight: 99
