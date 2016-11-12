@@ -46,6 +46,7 @@ class TranscodingServiceForm extends EntityForm {
     $plugins = array_map(function ($definition) {
       return $definition['label'];
     }, $this->pluginManager->getDefinitions());
+    $form['#tree'] = TRUE;
     $form['label'] = array(
       '#type' => 'textfield',
       '#title' => $this->t('Label'),
@@ -72,9 +73,7 @@ class TranscodingServiceForm extends EntityForm {
       '#disabled' => !$transcoding_service->isNew(),
     ];
     if (!$transcoding_service->isNew()) {
-      $form['configuration'] = [
-        '#parents' => ['configuration'],
-      ];
+      $form['configuration'] = [];
       $subformState = SubformState::createForSubform($form['configuration'], $form, $form_state);
       $form['configuration'] = $transcoding_service->getPlugin()->buildConfigurationForm($form['configuration'], $subformState);
     }

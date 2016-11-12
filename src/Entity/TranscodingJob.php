@@ -22,7 +22,17 @@ use Drupal\user\UserInterface;
  *     "view_builder" = "Drupal\Core\Entity\EntityViewBuilder",
  *     "list_builder" = "Drupal\transcoding\TranscodingJobListBuilder",
  *     "views_data" = "Drupal\transcoding\Entity\TranscodingJobViewsData",
+ *
+ *     "form" = {
+ *       "default" = "Drupal\transcoding\Form\TranscodingJobForm",
+ *       "add" = "Drupal\transcoding\Form\TranscodingJobForm",
+ *       "edit" = "Drupal\transcoding\Form\TranscodingJobForm",
+ *       "delete" = "Drupal\transcoding\Form\TranscodingJobDeleteForm",
+ *     },
  *     "access" = "Drupal\transcoding\TranscodingJobAccessControlHandler",
+ *     "route_provider" = {
+ *       "html" = "Drupal\transcoding\TranscodingJobHtmlRouteProvider",
+ *     },
  *   },
  *   base_table = "transcoding_job",
  *   admin_permission = "administer transcoding job entities",
@@ -32,20 +42,17 @@ use Drupal\user\UserInterface;
  *     "uid" = "user_id",
  *     "status" = "status",
  *   },
+ *   links = {
+ *     "canonical" = "/admin/transcoding/jobs/transcoding_job/{transcoding_job}",
+ *     "add-form" = "/admin/transcoding/jobs/transcoding_job/add",
+ *     "edit-form" = "/admin/transcoding/jobs/transcoding_job/{transcoding_job}/edit",
+ *     "delete-form" = "/admin/transcoding/jobs/transcoding_job/{transcoding_job}/delete",
+ *     "collection" = "/admin/transcoding/jobs/transcoding_job",
+ *   }
  * )
  */
 class TranscodingJob extends ContentEntityBase implements TranscodingJobInterface {
-
   use EntityChangedTrait;
-
-  const PENDING = 'pending';
-
-  const RUNNING = 'running';
-
-  const ERROR = 'error';
-
-  const COMPLETE = 'complete';
-
   /**
    * {@inheritdoc}
    */
@@ -147,7 +154,6 @@ class TranscodingJob extends ContentEntityBase implements TranscodingJobInterfac
         'max_length' => 50,
         'text_processing' => 0,
       ))
-      ->setReadOnly(TRUE)
       ->setDefaultValue('')
       ->setDisplayOptions('view', array(
         'label' => 'above',

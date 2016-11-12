@@ -17,14 +17,30 @@ class TranscodingJobAccessControlHandler extends EntityAccessControlHandler {
    * {@inheritdoc}
    */
   protected function checkAccess(EntityInterface $entity, $operation, AccountInterface $account) {
-    return AccessResult::allowedIfHasPermission($account, 'administer transcoding job entities');
+    /** @var \Drupal\transcoding\TranscodingJobInterface $entity */
+    switch ($operation) {
+      case 'view':
+        if (!$entity->isPublished()) {
+          return AccessResult::allowedIfHasPermission($account, 'view unpublished transcoding job entities');
+        }
+        return AccessResult::allowedIfHasPermission($account, 'view published transcoding job entities');
+
+      case 'update':
+        return AccessResult::allowedIfHasPermission($account, 'edit transcoding job entities');
+
+      case 'delete':
+        return AccessResult::allowedIfHasPermission($account, 'delete transcoding job entities');
+    }
+
+    // Unknown operation, no opinion.
+    return AccessResult::neutral();
   }
 
   /**
    * {@inheritdoc}
    */
   protected function checkCreateAccess(AccountInterface $account, array $context, $entity_bundle = NULL) {
-    return AccessResult::allowedIfHasPermission($account, 'administer transcoding job entities');
+    return AccessResult::allowedIfHasPermission($account, 'add transcoding job entities');
   }
 
 }
