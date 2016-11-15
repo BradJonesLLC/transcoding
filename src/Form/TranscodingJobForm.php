@@ -4,6 +4,8 @@ namespace Drupal\transcoding\Form;
 
 use Drupal\Core\Entity\ContentEntityForm;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Form\SubformState;
+use Drupal\transcoding\Entity\TranscodingService;
 
 /**
  * Form controller for Transcoding job edit forms.
@@ -17,9 +19,57 @@ class TranscodingJobForm extends ContentEntityForm {
   public function buildForm(array $form, FormStateInterface $form_state) {
     /* @var $entity \Drupal\transcoding\Entity\TranscodingJob */
     $form = parent::buildForm($form, $form_state);
-    $entity = $this->entity;
+    $form['#tree'] = TRUE;
+    $form['service']['widget']['#ajax'] = [
+      'callback' => [$this, 'serviceConfigAjax'],
+      'wrapper' => 'service-config-wrapper',
+    ];
+    $form['service_config'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Transcoding job configuration'),
+      '#attributes' => ['id' => 'service-config-wrapper'],
+      '#open' => TRUE,
+      '#weight' => 100,
+    ];
+    $form['service_config']['form'] = [];
+    if (!empty($form_state->getValues()['service'][0]['target_id'])) {
+      $service = TranscodingService::load($form_state->getValues()['service'][0]['target_id']);
+      $subFormState = SubformState::createForSubform($form['service_config']['form'], $form, $form_state);
+      $form['service_config']['form'] =  $service->getPlugin()->buildJobForm($form['service_config']['form'], $subFormState);
+    }
+    else {
+      $form['service_config']['form'] = ['#markup' => $this->t('Select a transcoding service.')];
+    }
+    $form['actions']['#weight'] = 101;
 
     return $form;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    $subFormState = SubformState::createForSubform($form['service_config']['form'], $form, $form_state);
+    if (!empty($form_state->getValues()['service'][0]['target_id'])) {
+      $service = TranscodingService::load($form_state->getValues()['service'][0]['target_id']);
+      $service->getPlugin()
+        ->validateJobForm($form['service_config']['form'], $subFormState);
+    }
+    return parent::validateForm($form, $form_state);
+  }
+
+  public function serviceConfigAjax(array &$form, FormStateInterface $form_state) {
+    return $form['service_config'];
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    parent::submitForm($form, $form_state);
+    $subFormState = SubformState::createForSubform($form['service_config']['form'], $form, $form_state);
+    $service = TranscodingService::load($form_state->getValues()['service'][0]['target_id']);
+    $this->entity->set('service_data', $service->getPlugin()->submitJobForm($form['service_config']['form'], $subFormState));
   }
 
   /**

@@ -52,7 +52,9 @@ use Drupal\user\UserInterface;
  * )
  */
 class TranscodingJob extends ContentEntityBase implements TranscodingJobInterface {
+
   use EntityChangedTrait;
+
   /**
    * {@inheritdoc}
    */
@@ -121,6 +123,29 @@ class TranscodingJob extends ContentEntityBase implements TranscodingJobInterfac
       ->setDescription(t('The UUID of the Transcoding job entity.'))
       ->setReadOnly(TRUE);
 
+    $fields['service'] = BaseFieldDefinition::create('entity_reference')
+      ->setLabel(t('Service'))
+      ->setSetting('target_type', 'transcoding_service')
+      ->setRequired(TRUE)
+      ->setDisplayOptions('form', [
+        'type' => 'options_select',
+        'weight' => 1,
+      ])
+      ->setDisplayConfigurable('view', TRUE);
+    $fields['media_bundle'] = BaseFieldDefinition::create('entity_reference')
+      ->setLabel(t('Target Bundle'))
+      ->setSetting('target_type', 'media_bundle')
+      ->setRequired(TRUE)
+      ->setDisplayOptions('form', [
+        'type' => 'options_select',
+        'weight' => 2,
+      ])
+      ->setDisplayConfigurable('view', TRUE);
+    $fields['service_data'] = BaseFieldDefinition::create('map')
+      ->setLabel(t('Service data'))
+      ->setReadOnly(TRUE)
+      ->setDisplayConfigurable('form', FALSE)
+      ->setDisplayConfigurable('view', FALSE);
     $fields['user_id'] = BaseFieldDefinition::create('entity_reference')
       ->setLabel(t('Authored by'))
       ->setDescription(t('The user ID of author of the Transcoding job entity.'))
@@ -134,17 +159,7 @@ class TranscodingJob extends ContentEntityBase implements TranscodingJobInterfac
         'type' => 'author',
         'weight' => 0,
       ))
-      ->setDisplayOptions('form', array(
-        'type' => 'entity_reference_autocomplete',
-        'weight' => 5,
-        'settings' => array(
-          'match_operator' => 'CONTAINS',
-          'size' => '60',
-          'autocomplete_type' => 'tags',
-          'placeholder' => '',
-        ),
-      ))
-      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('form', FALSE)
       ->setDisplayConfigurable('view', TRUE);
 
     $fields['status'] = BaseFieldDefinition::create('string')
@@ -154,7 +169,7 @@ class TranscodingJob extends ContentEntityBase implements TranscodingJobInterfac
         'max_length' => 50,
         'text_processing' => 0,
       ))
-      ->setDefaultValue('')
+      ->setDefaultValue('pending')
       ->setDisplayOptions('view', array(
         'label' => 'above',
         'type' => 'string',

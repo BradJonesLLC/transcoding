@@ -20,9 +20,6 @@ class TranscodingJobAccessControlHandler extends EntityAccessControlHandler {
     /** @var \Drupal\transcoding\TranscodingJobInterface $entity */
     switch ($operation) {
       case 'view':
-        if (!$entity->isPublished()) {
-          return AccessResult::allowedIfHasPermission($account, 'view unpublished transcoding job entities');
-        }
         return AccessResult::allowedIfHasPermission($account, 'view published transcoding job entities');
 
       case 'update':
