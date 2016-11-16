@@ -52,4 +52,11 @@ interface TranscoderPluginInterface extends ConfigurablePluginInterface, PluginF
    */
   public function submitJobForm(array &$form, FormStateInterface $form_state);
 
+  /**
+   * Process a transcoding job which declares its use of this plugin.
+   *
+   * @param $job \Drupal\transcoding\Entity\TranscodingJob
+   */
+  public function processJob($job);
+
 }

@@ -3,6 +3,7 @@
 namespace Drupal\transcoding\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBase;
+use Drupal\Core\Entity\EntityWithPluginCollectionInterface;
 use Drupal\transcoding\Plugin\TranscodingServicePluginCollection;
 use Drupal\transcoding\TranscodingServiceInterface;
 

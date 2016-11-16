@@ -7,7 +7,9 @@ use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EntityChangedTrait;
 use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\transcoding\Plugin\TranscoderPluginInterface;
 use Drupal\transcoding\TranscodingJobInterface;
+use Drupal\transcoding\TranscodingStatus;
 use Drupal\user\UserInterface;
 
 /**
@@ -169,7 +171,7 @@ class TranscodingJob extends ContentEntityBase implements TranscodingJobInterfac
         'max_length' => 50,
         'text_processing' => 0,
       ))
-      ->setDefaultValue('pending')
+      ->setDefaultValue(TranscodingStatus::PENDING)
       ->setDisplayOptions('view', array(
         'label' => 'above',
         'type' => 'string',
@@ -189,4 +191,26 @@ class TranscodingJob extends ContentEntityBase implements TranscodingJobInterfac
     return $fields;
   }
 
+  /**
+   * @return TranscoderPluginInterface
+   */
+  public function getPlugin() {
+    return TranscodingService::load($this->service->getString())->getPlugin();
+  }
+
+  /**
+   * Process the job through the plugin specified at creation.
+   */
+  public function process() {
+    $this->getPlugin()->processJob($this);
+  }
+
+  /**
+   * Get the service data the plugin previously stored on this job.
+   *
+   * @return array
+   */
+  public function getServiceData() {
+    return $this->service_data->first()->getValue();
+  }
 }
