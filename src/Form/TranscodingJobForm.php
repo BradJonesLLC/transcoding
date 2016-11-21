@@ -3,6 +3,8 @@
 namespace Drupal\transcoding\Form;
 
 use Drupal\Core\Entity\ContentEntityForm;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformState;
 use Drupal\transcoding\Entity\TranscodingService;
@@ -13,6 +15,7 @@ use Drupal\transcoding\Entity\TranscodingService;
  * @ingroup transcoding
  */
 class TranscodingJobForm extends ContentEntityForm {
+
   /**
    * {@inheritdoc}
    */
@@ -23,6 +26,30 @@ class TranscodingJobForm extends ContentEntityForm {
     $form['service']['widget']['#ajax'] = [
       'callback' => [$this, 'serviceConfigAjax'],
       'wrapper' => 'service-config-wrapper',
+    ];
+    $form['media_bundle']['widget']['#ajax'] = [
+      'callback' => [$this, 'bundleConfigAjax'],
+      'wrapper' => 'bundle-config-wrapper',
+    ];
+    $field_options = [];
+    if ($bundle_value = $form_state->getValue('media_bundle')) {
+      /** @var EntityFieldManagerInterface $field_manager */
+      $field_manager = \Drupal::service('entity_field.manager');
+      $fields = $field_manager->getFieldDefinitions('media', $bundle_value[0]['target_id']);
+      $base_fields = $field_manager->getBaseFieldDefinitions('media');
+      $field_options = array_diff(array_keys($fields), array_keys($base_fields));
+    }
+    $form['field_config_wrapper'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'bundle-config-wrapper'],
+      '#weight' => (float) $form['media_bundle']['#weight'] + '.1',
+    ];
+    $form['field_config_wrapper']['media_target_field'] = [
+      '#type' => 'select',
+      '#options' => array_combine($field_options, $field_options),
+      '#disabled' => !$field_options,
+      '#title' => $this->t('Field for file attachment'),
+      '#required' => TRUE,
     ];
     $form['service_config'] = [
       '#type' => 'details',
@@ -48,6 +75,14 @@ class TranscodingJobForm extends ContentEntityForm {
   /**
    * @inheritDoc
    */
+  protected function copyFormValuesToEntity(EntityInterface $entity, array $form, FormStateInterface $form_state) {
+    parent::copyFormValuesToEntity($entity, $form, $form_state);
+    $entity->set('media_target_field', $form_state->getValue('field_config_wrapper')['media_target_field']);
+  }
+
+  /**
+   * @inheritDoc
+   */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     $subFormState = SubformState::createForSubform($form['service_config']['form'], $form, $form_state);
     if (!empty($form_state->getValues()['service'][0]['target_id'])) {
@@ -60,6 +95,10 @@ class TranscodingJobForm extends ContentEntityForm {
 
   public function serviceConfigAjax(array &$form, FormStateInterface $form_state) {
     return $form['service_config'];
+  }
+
+  public function bundleConfigAjax(array &$form, FormStateInterface $form_state) {
+    return $form['field_config_wrapper'];
   }
 
   /**
