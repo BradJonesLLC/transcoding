@@ -228,4 +228,5 @@ class TranscodingJob extends ContentEntityBase implements TranscodingJobInterfac
   public function getServiceData() {
     return $this->service_data->first()->getValue();
   }
+
 }

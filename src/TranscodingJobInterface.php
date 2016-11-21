@@ -32,4 +32,21 @@ interface TranscodingJobInterface extends ContentEntityInterface, EntityChangedI
    */
   public function setCreatedTime($timestamp);
 
+  /**
+   * @return TranscoderPluginInterface
+   */
+  public function getPlugin();
+
+  /**
+   * Process the job through the plugin specified at creation.
+   */
+  public function process();
+
+  /**
+   * Get the service data the plugin previously stored on this job.
+   *
+   * @return array
+   */
+  public function getServiceData();
+
 }

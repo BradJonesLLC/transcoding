@@ -42,7 +42,7 @@ class TranscodingJobForm extends ContentEntityForm {
     $form['field_config_wrapper'] = [
       '#type' => 'container',
       '#attributes' => ['id' => 'bundle-config-wrapper'],
-      '#weight' => (float) $form['media_bundle']['#weight'] + '.1',
+      '#weight' => $form['media_bundle']['#weight'] + 0.1,
     ];
     $form['field_config_wrapper']['media_target_field'] = [
       '#type' => 'select',
