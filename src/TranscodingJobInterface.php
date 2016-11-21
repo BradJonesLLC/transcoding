@@ -49,4 +49,12 @@ interface TranscodingJobInterface extends ContentEntityInterface, EntityChangedI
    */
   public function getServiceData();
 
+  /**
+   * Set the service data.
+   *
+   * @param $data
+   * @return $this
+   */
+  public function setServiceData($data);
+
 }

@@ -1,9 +1,9 @@
 <?php
 
-namespace Drupal\transcoding;
+namespace Drupal\transcoding\Event;
 
 use Drupal\media_entity\MediaInterface;
-use Drupal\transcoding\Event\TranscodingJobEvent;
+use Drupal\transcoding\TranscodingJobInterface;
 
 /**
  * Class TranscodingJobCompleteEvent

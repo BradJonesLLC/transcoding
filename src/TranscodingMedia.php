@@ -2,10 +2,10 @@
 
 namespace Drupal\transcoding;
 
-use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\file\Entity\File;
 use Drupal\media_entity\Entity\Media;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Drupal\transcoding\Event\TranscodingJobCompleteEvent;
 
 /**
  * Class TranscodingMedia.
