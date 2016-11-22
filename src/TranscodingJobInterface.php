@@ -57,4 +57,18 @@ interface TranscodingJobInterface extends ContentEntityInterface, EntityChangedI
    */
   public function setServiceData($data);
 
+  /**
+   * Get the service data the plugin previously stored on this job.
+   *
+   * @return array
+   */
+  public function getData();
+
+  /**
+   * Set the service data.
+   *
+   * @param $data
+   * @return $this
+   */
+  public function setData($data);
 }

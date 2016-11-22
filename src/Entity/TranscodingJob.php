@@ -163,6 +163,11 @@ class TranscodingJob extends ContentEntityBase implements TranscodingJobInterfac
       ->setReadOnly(TRUE)
       ->setDisplayConfigurable('form', FALSE)
       ->setDisplayConfigurable('view', FALSE);
+    $fields['data'] = BaseFieldDefinition::create('map')
+      ->setLabel(t('Data'))
+      ->setReadOnly(TRUE)
+      ->setDisplayConfigurable('form', FALSE)
+      ->setDisplayConfigurable('view', FALSE);
     $fields['user_id'] = BaseFieldDefinition::create('entity_reference')
       ->setLabel(t('Authored by'))
       ->setDescription(t('The user ID of author of the Transcoding job entity.'))
@@ -234,6 +239,24 @@ class TranscodingJob extends ContentEntityBase implements TranscodingJobInterfac
    * @return $this
    */
   public function setServiceData($data) {
+    $this->service_data[0] = $data;
+    return $this;
+  }
+
+  /**
+   * Get the arbitrary data.
+   *
+   * @return array
+   */
+  public function getData() {
+    return $this->service_data->first()->getValue();
+  }
+
+  /**
+   * @param $data
+   * @return $this
+   */
+  public function setData($data) {
     $this->service_data[0] = $data;
     return $this;
   }

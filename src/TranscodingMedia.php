@@ -32,7 +32,6 @@ class TranscodingMedia {
     $media = Media::create([
       'bundle' => $job->media_bundle->entity->id(),
       'uid' => $job->getOwnerId(),
-      'name' => $job->label(),
     ]);
     return $media;
   }
