@@ -51,7 +51,9 @@ class TranscodingMedia {
       ]);
     }
     $media->save();
-    $job->set('status', TranscodingStatus::COMPLETE)->save();
+    $job->set('status', TranscodingStatus::COMPLETE)
+      ->set('media', ['target_id' => $media->id()])
+      ->save();
   }
 
 }

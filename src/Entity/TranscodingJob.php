@@ -143,6 +143,12 @@ class TranscodingJob extends ContentEntityBase implements TranscodingJobInterfac
         'weight' => 2,
       ])
       ->setDisplayConfigurable('view', TRUE);
+    $fields['media'] = BaseFieldDefinition::create('entity_reference')
+      ->setLabel(t('Generated Media'))
+      ->setSetting('target_type', 'media')
+      ->setRequired(TRUE)
+      ->setDisplayConfigurable('form', FALSE)
+      ->setDisplayConfigurable('view', TRUE);
     $fields['media_target_field'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Target field'))
       ->setDescription(t('Target field on selected bundle'))
