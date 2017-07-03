@@ -5,6 +5,7 @@ namespace Drupal\transcoding\Plugin;
 use Drupal\Component\Plugin\ConfigurablePluginInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
+use Drupal\transcoding\TranscodingJobInterface;
 
 interface TranscoderPluginInterface extends ConfigurablePluginInterface, PluginFormInterface {
 
@@ -55,8 +56,8 @@ interface TranscoderPluginInterface extends ConfigurablePluginInterface, PluginF
   /**
    * Process a transcoding job which declares its use of this plugin.
    *
-   * @param $job \Drupal\transcoding\Entity\TranscodingJob
+   * @param \Drupal\transcoding\TranscodingJobInterface $job
    */
-  public function processJob($job);
+  public function processJob(TranscodingJobInterface $job);
 
 }

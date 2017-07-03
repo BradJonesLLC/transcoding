@@ -33,7 +33,7 @@ interface TranscodingJobInterface extends ContentEntityInterface, EntityChangedI
   public function setCreatedTime($timestamp);
 
   /**
-   * @return TranscoderPluginInterface
+   * @return \Drupal\transcoding\Plugin\TranscoderPluginInterface
    */
   public function getPlugin();
 
